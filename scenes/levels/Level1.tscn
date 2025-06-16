@@ -1,0 +1,80 @@
+[gd_scene load_steps=8 format=3 uid="uid://bf5r3kicmlxmy"]
+
+[ext_resource type="Script" uid="uid://bmo7evyww8ods" path="res://scenes/levels/level.gd" id="1_j08sa"]
+[ext_resource type="Script" uid="uid://b8rdus1raacea" path="res://scenes/levels/player_spawner.gd" id="2_fh0io"]
+[ext_resource type="Script" uid="uid://d4hr76jjakh2q" path="res://scenes/levels/camera_controller.gd" id="2_x4si1"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_b1abc"]
+sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+ground_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+
+[sub_resource type="Sky" id="Sky_72kg3"]
+sky_material = SubResource("ProceduralSkyMaterial_b1abc")
+
+[sub_resource type="Environment" id="Environment_adfdk"]
+background_mode = 2
+sky = SubResource("Sky_72kg3")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_s6e6t"]
+size = Vector3(31.2103, 1, 1)
+
+[node name="Level1" type="Node3D"]
+script = ExtResource("1_j08sa")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_adfdk")
+
+[node name="Environment" type="Node3D" parent="."]
+
+[node name="Terrain" type="Node3D" parent="Environment"]
+
+[node name="Ground1" type="CSGBox3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, 0)
+use_collision = true
+collision_layer = 16
+collision_mask = 0
+size = Vector3(9, 2, 1)
+
+[node name="Ground2" type="CSGBox3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+use_collision = true
+collision_layer = 16
+collision_mask = 0
+size = Vector3(9, 2, 1)
+
+[node name="Platforms" type="Node3D" parent="Environment"]
+
+[node name="Platform1" type="CSGBox3D" parent="Environment/Platforms"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.493, 6, 0)
+use_collision = true
+collision_layer = 32
+collision_mask = 0
+size = Vector3(2, 0.2, 1)
+
+[node name="Platform2" type="CSGBox3D" parent="Environment/Platforms"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.493, 4, 0)
+use_collision = true
+collision_layer = 32
+collision_mask = 0
+size = Vector3(2, 0.2, 1)
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="PlayerSpawner" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.4783, 2.16567, -0.0142975)
+script = ExtResource("2_fh0io")
+
+[node name="Audio" type="Node3D" parent="."]
+
+[node name="CameraController" type="Camera3D" parent="."]
+script = ExtResource("2_x4si1")
+offset = Vector3(0, 2, 12)
+
+[node name="DeathZone" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, -2, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DeathZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.130798, 0, 0)
+shape = SubResource("BoxShape3D_s6e6t")

@@ -15,11 +15,6 @@ run/main_scene="uid://bf5r3kicmlxmy"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
 
-[autoload]
-
-GameManager="*res://scripts/managers/game_manager.gd"
-AudioManager="*res://scripts/managers/audio_manager.gd"
-
 [display]
 
 window/size/viewport_width=1280
@@ -80,3 +75,4 @@ reload={
 3d_physics/layer_2="Enemies"
 3d_physics/layer_3="Projectile"
 3d_physics/layer_5="Terrain"
+3d_physics/layer_6="Platforms"
