@@ -23,6 +23,10 @@ size = Vector3(31.2103, 1, 1)
 [node name="Level1" type="Node3D"]
 script = ExtResource("1_j08sa")
 
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0.486361, -0.613535, 0.622116, -0.116002, 0.660357, 0.741938, -32.9994, 5.96799, 10.5377)
+shadow_enabled = true
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_adfdk")
 
@@ -32,6 +36,13 @@ environment = SubResource("Environment_adfdk")
 
 [node name="Ground1" type="CSGBox3D" parent="Environment/Terrain"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, 0)
+use_collision = true
+collision_layer = 16
+collision_mask = 0
+size = Vector3(9, 2, 1)
+
+[node name="Ground3" type="CSGBox3D" parent="Environment/Terrain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.92247, 2.20209, 0)
 use_collision = true
 collision_layer = 16
 collision_mask = 0

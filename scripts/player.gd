@@ -1,4 +1,4 @@
-#player.gd
+#player.gd - AnimationTree Edition!
 
 extends CharacterBody3D
 class_name Player
@@ -19,7 +19,6 @@ signal player_died
 @export var coyote_time: float = 0.1
 @export var jump_buffer: float = 0.1
 
-# Animation Settings
 @export_group("Animation")
 @export var turn_speed: float = 10.0  # How fast character turns around
 
@@ -33,14 +32,17 @@ var is_moving: bool = false
 var is_jumping: bool = false
 var is_firing: bool = false
 
-# Components
-@onready var animation_player: AnimationPlayer = $YBot/AnimationPlayer
+# Components - NOTE: AnimationPlayer is now just for imported animations!
+@onready var animation_tree: AnimationTree = $AnimationTree
 @onready var character_model: Node3D = $YBot
 @onready var collision_shape = $CollisionShape3D
+@onready var aiming_controller: AimingController = $Components/AimingController
+@onready var weapon_component: WeaponComponent = $Components/WeaponComponent
 
 func _ready():
 	setup_player_collision()
-	setup_animations()
+	setup_animation_tree()
+	setup_aiming()
 
 func setup_player_collision():
 	# Set up collision for the character
@@ -50,13 +52,21 @@ func setup_player_collision():
 		capsule_shape.height = 1.8
 		collision_shape.shape = capsule_shape
 
-func setup_animations():
-	if animation_player:
-		# Start with idle animation
-		play_animation("rifle aiming idle/mixamo_com")
-		print("Animation Player found with animations: ", animation_player.get_animation_list())
+func setup_animation_tree():
+	"""Initialize the AnimationTree system"""
+	if animation_tree:
+		# The AimingController will handle the AnimationTree setup
+		print("🎭 AnimationTree found and ready!")
 	else:
-		print("WARNING: No AnimationPlayer found! Make sure XBot is properly imported.")
+		print("❌ WARNING: No AnimationTree found! Make sure to add one to the scene.")
+
+func setup_aiming():
+	"""Connect the aiming controller"""
+	if aiming_controller:
+		aiming_controller.aim_direction_changed.connect(_on_aim_direction_changed)
+		print("🎯 Aiming controller connected!")
+	else:
+		print("❌ WARNING: No AimingController found!")
 
 func _physics_process(delta):
 	if not is_alive:
@@ -67,7 +77,10 @@ func _physics_process(delta):
 	handle_jumping(delta)
 	handle_movement(delta)
 	handle_character_facing(delta)
-	update_animations()
+	handle_firing()
+	
+	# NOTE: Animation updates are now handled by AimingController!
+	# No more manual animation switching needed!
 	
 	was_on_floor = is_on_floor()
 	move_and_slide()
@@ -85,8 +98,16 @@ func handle_gravity(delta):
 		velocity.y -= gravity * delta
 		velocity.y = max(velocity.y, -max_fall_speed)
 	
-	# Update jumping state
+	# Update jumping state with DETECTIVE WORK! 🕵️‍♂️
+	var previous_jumping = is_jumping
 	is_jumping = not is_on_floor() and velocity.y > 0
+	
+	# DETECTIVE PRINTS - Let's catch the culprit!
+	if previous_jumping != is_jumping:
+		print("🦘 JUMP STATE CHANGED!")
+		print("  is_on_floor(): ", is_on_floor())
+		print("  velocity.y: ", velocity.y)
+		print("  is_jumping: ", is_jumping)
 
 func handle_jumping(delta):
 	# Update timers
@@ -131,62 +152,67 @@ func handle_character_facing(delta):
 		var new_rotation = lerp_angle(current_rotation, target_y_rotation, turn_speed * delta)
 		character_model.rotation.y = new_rotation
 
-func update_animations():
-	if not animation_player:
-		return
-	
-	# Determine which animation to play based on state
-	var target_animation = get_target_animation()
-	play_animation(target_animation)
-
-func get_target_animation() -> String:
-	# Priority order: jumping -> firing -> moving -> idle
-	
-	if is_jumping:
-		return "rifle jump/mixamo_com"
-	
-	if is_firing and is_on_floor():
-		return "firing rifle/mixamo_com"
-	
-	if is_moving and is_on_floor():
-		# Check if we're moving backwards while aiming
-		var movement_dir = sign(velocity.x)
-		if movement_dir != 0 and movement_dir != facing_direction:
-			return "run backwards/mixamo_com"
+func handle_firing():
+	"""Handle weapon firing with aiming direction integration"""
+	if weapon_component:
+		if is_firing:
+			weapon_component.start_firing()
 		else:
-			return "rifle run/mixamo_com"
-	
-	return "rifle aiming idle/mixamo_com"
+			weapon_component.stop_firing()
 
-func play_animation(anim_name: String):
-	if animation_player and animation_player.has_animation(anim_name):
-		if animation_player.current_animation != anim_name:
-			animation_player.play(anim_name)
-	else:
-		print("Animation not found: ", anim_name)
+func _on_aim_direction_changed(direction_name: String):
+	"""Respond to aiming direction changes from AimingController"""
+	print("🎯 Player received aim change: ", direction_name)
+	
+	# Here you can add any player-specific responses to aiming changes
+	# For example: sound effects, UI updates, special abilities, etc.
 
 func apply_knockback(force: Vector3):
 	if is_alive:
 		velocity += force
 
 func take_hit():
-	"""Play hit reaction animation"""
-	if is_alive and animation_player:
-		play_animation("hit reaction/mixamo_com")
-		# You might want to add invincibility frames here
+	"""Play hit reaction - AnimationTree can handle this with OneShot nodes"""
+	if is_alive:
+		# TODO: Trigger hit reaction through AnimationTree
+		print("💥 Player hit! (Implement OneShot hit reaction in AnimationTree)")
 
 func die():
 	if not is_alive:
 		return
 	
-	print("Player is dying...")
+	print("💀 Player is dying...")
 	is_alive = false
 	
-	# TODO: Death animation, ragdoll physics, etc.
+	# TODO: Death animation through AnimationTree
 	
 	player_died.emit()
 
 func _input(event):
 	if event.is_action_pressed("ui_accept"):
-		print("Player position: ", global_position)
-		print("Current animation: ", animation_player.current_animation if animation_player else "No AnimationPlayer")
+		print("🎮 Player Debug Info:")
+		print("  Position: ", global_position)
+		print("  Facing: ", "RIGHT" if facing_direction > 0 else "LEFT")
+		print("  Moving: ", is_moving)
+		print("  Jumping: ", is_jumping)
+		print("  Firing: ", is_firing)
+		print("  Velocity: ", velocity)
+		
+		if aiming_controller:
+			print("  Aim Direction: ", aiming_controller.get_aim_direction_name())
+			print("  Blend Position: ", aiming_controller.get_blend_position())
+
+# Getter functions for external systems
+func get_aim_direction_vector() -> Vector3:
+	"""Get the aiming direction for weapon/projectile systems"""
+	if aiming_controller:
+		return aiming_controller.get_aim_direction_vector()
+	else:
+		return Vector3.FORWARD
+
+func get_aim_angle_degrees() -> float:
+	"""Get aim angle for weapon systems"""
+	if aiming_controller:
+		return aiming_controller.get_aim_angle_degrees()
+	else:
+		return 0.0
