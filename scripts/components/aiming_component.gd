@@ -1,374 +1,301 @@
 # aiming_controller.gd
-extends Node
+extends Node3D
 class_name AimingController
 
 signal aim_direction_changed(direction_name: String)
 
-enum AimDirection {
-	UP,
-	FORWARD_UP,
-	FORWARD,
-	FORWARD_DOWN,
-	DOWN
-}
-
+# Input mode enum
 enum InputMode {
-	MOUSE_KEYBOARD,
+	MOUSE,
 	CONTROLLER
 }
 
-# Export settings
-@export_group("Aiming Settings")
-@export var mouse_sensitivity: float = 1.0
-@export var controller_sensitivity: float = 2.0
-@export var aim_deadzone: float = 0.1
-@export var blend_smoothing: float = 8.0  # How fast blendspace responds
-
-# References
-@export var player: Player
-@export var animation_tree: AnimationTree
-
-# Input mode system
-var current_input_mode: InputMode = InputMode.MOUSE_KEYBOARD
-var input_mode_names = {
-	InputMode.MOUSE_KEYBOARD: "MOUSE_KEYBOARD",
-	InputMode.CONTROLLER: "CONTROLLER"
+# Aiming directions
+enum AimDirection {
+	UP = 0,
+	UP_FORWARD = 1,
+	FORWARD = 2,
+	DOWN_FORWARD = 3,
+	DOWN = 4
 }
 
-# Animation state tracking
-var current_aim_direction: AimDirection = AimDirection.FORWARD
-var current_blend_position: Vector2 = Vector2.ZERO
-var target_blend_position: Vector2 = Vector2.ZERO
+# Export variables
+@export var player: Player
+@export var animation_tree: AnimationTree
+@export var mouse_sensitivity: float = 0.3
+@export var controller_deadzone: float = 0.2
+@export var transition_speed: float = 10.0
+@export var debug_mode: bool = true
 
-# BlendSpace parameters (these match your AnimationTree setup)
-var locomotion_blend_space_path = "parameters/LocomotionState/blend_position"
-var combat_blend_space_path = "parameters/CombatState/blend_position"
-var state_machine_path = "parameters/playback"
+# Current state
+var current_input_mode: InputMode = InputMode.MOUSE
+var current_aim_direction: AimDirection = AimDirection.FORWARD
+var target_aim_direction: AimDirection = AimDirection.FORWARD
+var aim_blend_position: Vector2 = Vector2.ZERO
+var is_aiming_extreme: bool = false  # For straight up/down aiming
+
+# Mouse aiming
+var viewport_center: Vector2
+var mouse_relative_y: float = 0.0
+
+# Controller aiming
+var controller_aim_input: Vector2 = Vector2.ZERO
+
+# Animation state names
+const STATE_LOCOMOTION = "LocomotionState"
+const STATE_COMBAT = "CombatState"
+const STATE_JUMP = "JumpState"
+
+# Aiming angle thresholds (in normalized values -1 to 1)
+const THRESHOLD_UP = 0.6
+const THRESHOLD_UP_FORWARD = 0.3
+const THRESHOLD_DOWN_FORWARD = -0.3
+const THRESHOLD_DOWN = -0.6
 
 func _ready():
-	setup_animation_tree()
-	print("🎭 Animation Tree Conductor initialized!")
-	print("   Press \\ to cycle input modes!")
-
-func setup_animation_tree():
+	setup_viewport()
+	
+	if not player:
+		player = get_parent().get_parent() as Player
+		if not player:
+			push_error("AimingController: No player reference found!")
+	
 	if not animation_tree:
-		print("❌ ERROR: No AnimationTree assigned!")
-		return
+		animation_tree = player.get_node("AnimationTree")
+		if not animation_tree:
+			push_error("AimingController: No AnimationTree found!")
 	
-	if not animation_tree.tree_root:
-		print("❌ ERROR: AnimationTree has no root node!")
-		return
-	
-	# Start the animation tree
-	animation_tree.active = true
-	
-	# Set initial state to Locomotion
-	var state_machine: AnimationNodeStateMachinePlayback = animation_tree.get(state_machine_path)
-	if state_machine:
-		state_machine.start("LocomotionState")
-		print("✅ AnimationTree started in Locomotion state!")
-	else:
-		print("❌ Could not find StateMachine playback!")
+	print("🎯 AimingController initialized - Mode: ", get_input_mode_name())
 
-func _input(event):
-	if event.is_action_pressed("cycle_input_mode"):
-		cycle_input_mode()
-	
-	# MASTER DEBUG COMMAND! 🔍
-	if event.is_action_pressed("ui_accept"):
-		print_complete_debug_info()
-
-func cycle_input_mode():
-	match current_input_mode:
-		InputMode.MOUSE_KEYBOARD:
-			current_input_mode = InputMode.CONTROLLER
-		InputMode.CONTROLLER:
-			current_input_mode = InputMode.MOUSE_KEYBOARD
-	
-	print("🎮 Input Mode: ", input_mode_names[current_input_mode])
+func setup_viewport():
+	viewport_center = get_viewport().get_visible_rect().size / 2.0
 
 func _process(delta):
-	if not player or not animation_tree:
+	if not player or not player.is_alive:
 		return
 	
-	update_aiming_input()
-	update_movement_blending(delta)
-	update_animation_states()
-
-func update_aiming_input():
-	"""Calculate aim input and convert to blend space coordinates"""
-	var aim_input = get_aim_input()
-	var new_direction = calculate_aim_direction(aim_input)
+	# Update input mode and gather input
+	update_input_mode()
+	gather_aim_input(delta)
 	
-	# Convert to blend space position
-	target_blend_position = aim_input_to_blend_position(aim_input)
+	# Calculate target aim direction
+	calculate_aim_direction()
 	
-	if new_direction != current_aim_direction:
-		current_aim_direction = new_direction
-		aim_direction_changed.emit(get_aim_direction_name())
-		print("🎯 Aim: ", get_aim_direction_name(), " | Blend: ", target_blend_position)
+	# Smoothly transition aim
+	update_aim_blend(delta)
+	
+	# Update animation tree
+	update_animation_state()
 
-func get_aim_input() -> Vector2:
+func update_input_mode():
+	"""Detect and switch between mouse and controller input"""
+	# Check for controller input
+	var controller_input = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var has_controller_input = controller_input.length() > controller_deadzone
+	
+	# Check for significant mouse movement
+	var mouse_delta = Input.get_last_mouse_velocity().length()
+	var has_mouse_input = mouse_delta > 10.0
+
+func gather_aim_input(delta):
+	"""Gather aim input based on current input mode"""
 	match current_input_mode:
-		InputMode.MOUSE_KEYBOARD:
-			return get_mouse_keyboard_input()
+		InputMode.MOUSE:
+			gather_mouse_input()
 		InputMode.CONTROLLER:
-			return get_controller_input()
-		_:
-			return Vector2.ZERO
+			gather_controller_input()
 
-func get_mouse_keyboard_input() -> Vector2:
-	# Mouse Y for vertical aiming, keyboard X for horizontal movement
-	if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		return Vector2.ZERO
-	
+func gather_mouse_input():
+	"""Calculate aim based on mouse position relative to screen center"""
 	var mouse_pos = get_viewport().get_mouse_position()
-	var screen_center = get_viewport().get_visible_rect().size / 2
-	var mouse_y_offset = (mouse_pos.y - screen_center.y) / screen_center.y
-	mouse_y_offset *= mouse_sensitivity
+	var screen_size = get_viewport().get_visible_rect().size
 	
-	var keyboard_x_input = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
+	# Normalize mouse Y position (-1 to 1, where -1 is top, 1 is bottom)
+	mouse_relative_y = ((mouse_pos.y / screen_size.y) - 0.5) * 2.0
+	mouse_relative_y = clamp(mouse_relative_y, -1.0, 1.0)
 	
-	return Vector2(keyboard_x_input, mouse_y_offset)
+	# Check if we have horizontal movement input
+	var move_input = Input.get_axis("move_left", "move_right")
+	is_aiming_extreme = abs(move_input) < 0.1
 
-func get_controller_input() -> Vector2:
-	var controller_input = Vector2(
-		Input.get_action_strength("move_right") - Input.get_action_strength("move_left"),
-		Input.get_action_strength("move_down") - Input.get_action_strength("move_up")
-	)
+func gather_controller_input():
+	"""Calculate aim based on controller stick input"""
+	# Get left stick for combined movement/aiming
+	var left_stick = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	
-	if controller_input.length() > aim_deadzone:
-		return controller_input * controller_sensitivity
+	# Apply deadzone
+	if left_stick.length() < controller_deadzone:
+		controller_aim_input = Vector2.ZERO
+		is_aiming_extreme = true
 	else:
-		return Vector2.ZERO
+		controller_aim_input = left_stick.normalized()
+		# Check if we're aiming straight up/down (no horizontal input)
+		is_aiming_extreme = abs(controller_aim_input.x) < 0.1
 
-func calculate_aim_direction(aim_input: Vector2) -> AimDirection:
-	"""Convert input to discrete aim direction for gameplay logic"""
-	if aim_input.length() < 0.1:
-		return AimDirection.FORWARD
+func calculate_aim_direction():
+	"""Convert input to discrete aim direction"""
+	var aim_value: float = 0.0
 	
-	# Pure vertical inputs
-	if abs(aim_input.x) < 0.1:
-		if aim_input.y < -0.5:
-			return AimDirection.UP
-		elif aim_input.y > 0.5:
-			return AimDirection.DOWN
+	# Get the vertical aim value based on input mode
+	match current_input_mode:
+		InputMode.MOUSE:
+			aim_value = -mouse_relative_y  # Inverted because screen Y is down
+		InputMode.CONTROLLER:
+			aim_value = -controller_aim_input.y  # Controller Y is already correct
 	
-	# Pure horizontal
-	if abs(aim_input.y) < 0.1:
-		return AimDirection.FORWARD
-	
-	# Diagonal combinations
-	if aim_input.y < -0.1:
-		return AimDirection.FORWARD_UP
-	elif aim_input.y > 0.1:
-		return AimDirection.FORWARD_DOWN
+	# Handle extreme aiming (straight up/down) when no horizontal movement
+	if is_aiming_extreme:
+		if aim_value > THRESHOLD_UP_FORWARD:
+			target_aim_direction = AimDirection.UP
+		elif aim_value < THRESHOLD_DOWN_FORWARD:
+			target_aim_direction = AimDirection.DOWN
+		else:
+			target_aim_direction = AimDirection.FORWARD
 	else:
-		return AimDirection.FORWARD
-
-func aim_input_to_blend_position(aim_input: Vector2) -> Vector2:
-	"""Convert raw input to BlendSpace2D coordinates"""
-	# X-axis: Movement (for locomotion blending)
-	# Y-axis: Aiming direction (for vertical aim blending)
+		# Normal 45-degree increment aiming
+		if aim_value > THRESHOLD_UP:
+			target_aim_direction = AimDirection.UP_FORWARD
+		elif aim_value > THRESHOLD_UP_FORWARD:
+			target_aim_direction = AimDirection.UP_FORWARD
+		elif aim_value < THRESHOLD_DOWN:
+			target_aim_direction = AimDirection.DOWN_FORWARD
+		elif aim_value < THRESHOLD_DOWN_FORWARD:
+			target_aim_direction = AimDirection.DOWN_FORWARD
+		else:
+			target_aim_direction = AimDirection.FORWARD
 	
-	# Clamp and smooth the input
-	var blend_x = clamp(aim_input.x, -1.0, 1.0)
-	var blend_y = clamp(aim_input.y, -1.0, 1.0)
-	
-	return Vector2(blend_x, blend_y)
+	# Emit signal if direction changed
+	if target_aim_direction != current_aim_direction:
+		current_aim_direction = target_aim_direction
+		aim_direction_changed.emit(get_aim_direction_name())
 
-func update_movement_blending(delta):
-	"""Smooth blend position updates for natural animation transitions"""
+func update_aim_blend(delta):
+	"""Smoothly transition the blend position for animations"""
+	var target_blend = get_blend_position_for_direction(current_aim_direction)
+	aim_blend_position = aim_blend_position.lerp(target_blend, transition_speed * delta)
+
+func get_blend_position_for_direction(direction: AimDirection) -> Vector2:
+	"""Convert aim direction to blend tree position"""
+	# X axis: movement (will be set by player movement)
+	# Y axis: aim direction
+	match direction:
+		AimDirection.UP:
+			return Vector2(0, 1.0)
+		AimDirection.UP_FORWARD:
+			return Vector2(0, 0.5)
+		AimDirection.FORWARD:
+			return Vector2(0, 0.0)
+		AimDirection.DOWN_FORWARD:
+			return Vector2(0, -0.5)
+		AimDirection.DOWN:
+			return Vector2(0, -1.0)
+	
+	return Vector2.ZERO
+
+func update_animation_state():
+	"""Update the animation tree with current aim blend"""
 	if not animation_tree:
 		return
 	
-	# Smooth interpolation to target position
-	current_blend_position = current_blend_position.lerp(target_blend_position, blend_smoothing * delta)
+	# Get movement input for X axis of blend space
+	var move_input = Input.get_axis("move_left", "move_right")
+	var movement_blend = move_input * player.facing_direction
 	
-	# Apply to animation tree blend spaces
-	animation_tree.set(locomotion_blend_space_path, current_blend_position)
+	# Combine movement and aim for final blend position
+	var final_blend = Vector2(movement_blend, aim_blend_position.y)
 	
-	# If in combat state, also update combat blend space
-	var state_machine: AnimationNodeStateMachinePlayback = animation_tree.get(state_machine_path)
-	if state_machine and state_machine.get_current_node() == "CombatState":
-		animation_tree.set(combat_blend_space_path, current_blend_position)
+	# Update the blend position
+	animation_tree.set("parameters/" + STATE_LOCOMOTION + "/blend_position", final_blend)
+	
+	# Handle state transitions
+	if player.is_jumping:
+		animation_tree.set("parameters/conditions/is_jumping", true)
+	else:
+		animation_tree.set("parameters/conditions/is_jumping", false)
+	
+	if player.is_firing:
+		animation_tree.set("parameters/conditions/is_firing", true)
+	else:
+		animation_tree.set("parameters/conditions/is_firing", false)
 
-func update_animation_states():
-	"""Handle state transitions based on player actions"""
-	if not animation_tree or not player:
-		return
+func get_aim_direction_vector() -> Vector3:
+	"""Get the world-space aim direction for projectiles"""
+	var base_forward = Vector3.FORWARD * player.facing_direction
 	
-	var state_machine: AnimationNodeStateMachinePlayback = animation_tree.get(state_machine_path)
-	if not state_machine:
-		print("❌ ERROR: Could not get StateMachine playback!")
-		return
+	match current_aim_direction:
+		AimDirection.UP:
+			return Vector3.UP
+		AimDirection.UP_FORWARD:
+			return (base_forward + Vector3.UP).normalized()
+		AimDirection.FORWARD:
+			return base_forward
+		AimDirection.DOWN_FORWARD:
+			return (base_forward + Vector3.DOWN).normalized()
+		AimDirection.DOWN:
+			return Vector3.DOWN
 	
-	var current_state = state_machine.get_current_node()
+	return base_forward
+
+func get_aim_angle_degrees() -> float:
+	"""Get aim angle in degrees for weapon rotation"""
+	match current_aim_direction:
+		AimDirection.UP:
+			return 90.0
+		AimDirection.UP_FORWARD:
+			return 45.0
+		AimDirection.FORWARD:
+			return 0.0
+		AimDirection.DOWN_FORWARD:
+			return -45.0
+		AimDirection.DOWN:
+			return -90.0
 	
-	# DETECTIVE WORK - Let's see what's happening!
-	# Only print when state changes to reduce console spam
-	var should_debug = false
-	
-	# Handle jumping
-	if player.is_jumping and current_state != "JumpState":
-		state_machine.travel("JumpState")
-		print("🦘 Transitioning to Jump!")
-		should_debug = true
-		return
-	
-	# Handle combat vs locomotion
-	if player.is_firing and current_state == "LocomotionState":
-		state_machine.travel("CombatState")
-		print("💥 Transitioning to Combat!")
-		should_debug = true
-	elif not player.is_firing and current_state == "CombatState":
-		state_machine.travel("LocomotionState")
-		print("🚶 Transitioning to Locomotion!")
-		should_debug = true
-	
-	# Return from jump to appropriate state
-	if not player.is_jumping and current_state == "JumpState":
-		if player.is_firing:
-			state_machine.travel("CombatState")
-			print("🎯 Landing in Combat mode!")
-		else:
-			state_machine.travel("LocomotionState")
-			print("🎯 Landing in Locomotion mode!")
-		should_debug = true
-	
-	# Print detailed debug info only during state changes
-	if should_debug:
-		print("  📊 State: ", current_state, " → Jumping: ", player.is_jumping, " | Firing: ", player.is_firing)
+	return 0.0
 
 func get_aim_direction_name() -> String:
+	"""Get human-readable aim direction"""
 	match current_aim_direction:
 		AimDirection.UP:
 			return "UP"
-		AimDirection.FORWARD_UP:
-			return "FORWARD_UP"
+		AimDirection.UP_FORWARD:
+			return "UP_FORWARD"
 		AimDirection.FORWARD:
 			return "FORWARD"
-		AimDirection.FORWARD_DOWN:
-			return "FORWARD_DOWN"
+		AimDirection.DOWN_FORWARD:
+			return "DOWN_FORWARD"
 		AimDirection.DOWN:
 			return "DOWN"
-		_:
-			return "UNKNOWN"
+	
+	return "UNKNOWN"
 
-func get_current_input_mode_name() -> String:
-	return input_mode_names[current_input_mode]
+func get_input_mode_name() -> String:
+	"""Get human-readable input mode"""
+	match current_input_mode:
+		InputMode.MOUSE:
+			return "MOUSE"
+		InputMode.CONTROLLER:
+			return "CONTROLLER"
+	
+	return "UNKNOWN"
 
 func get_blend_position() -> Vector2:
 	"""Get current blend position for debugging"""
-	return current_blend_position
+	return aim_blend_position
 
-func get_aim_direction_vector() -> Vector3:
-	"""Convert current aim direction to world space vector for weapon systems"""
-	var angle_radians = deg_to_rad(get_aim_angle_degrees())
-	var direction = Vector3(0, sin(angle_radians), cos(angle_radians))
-	
-	# Apply character facing direction
-	if player and player.facing_direction < 0:
-		direction.x *= -1
-	
-	return direction
-
-func get_aim_angle_degrees() -> float:
-	"""Get aim angle in degrees for weapon/projectile systems"""
-	match current_aim_direction:
-		AimDirection.UP:
-			return -90.0
-		AimDirection.FORWARD_UP:
-			return -45.0
-		AimDirection.FORWARD:
-			return 0.0
-		AimDirection.FORWARD_DOWN:
-			return 45.0
-		AimDirection.DOWN:
-			return 90.0
-		_:
-			return 0.0
-
-func print_complete_debug_info():
-	"""The Ultimate Animation System Detective Report! 🕵️‍♂️"""
-	print("\n🔍 ==================== ANIMATION SYSTEM DEBUG REPORT ====================")
-	
-	if not player:
-		print("❌ CRITICAL: No player reference!")
-		return
-	
-	if not animation_tree:
-		print("❌ CRITICAL: No animation tree reference!")
-		return
-	
-	print("🎭 ANIMATION TREE STATUS:")
-	print("  Active: ", animation_tree.active)
-	print("  Tree Root: ", animation_tree.tree_root)
-	
-	var state_machine: AnimationNodeStateMachinePlayback = animation_tree.get(state_machine_path)
-	if state_machine:
-		print("  Current State: ", state_machine.get_current_node())
-		print("  Travel Path: ", state_machine.get_travel_path())
-	else:
-		print("  ❌ StateMachine: NOT FOUND!")
-	
-	# 🦘 JUMP ANIMATION INVESTIGATION!
-	print("\n🦘 JUMP STATE INVESTIGATION:")
-	var jump_state_node = animation_tree.tree_root.get_node("JumpState")
-	if jump_state_node:
-		print("  JumpState Node Found: ✅")
-		print("  Node Type: ", jump_state_node.get_class())
+func _input(event):
+	"""Handle debug input for switching modes manually"""
+	if debug_mode:
+		if event.is_action_pressed("switch_input_mode"):
+			current_input_mode = InputMode.CONTROLLER if current_input_mode == InputMode.MOUSE else InputMode.MOUSE
+			print("🔄 Manually switched to: ", get_input_mode_name())
 		
-		# Try different methods to get the animation info
-		if jump_state_node.has_method("get_animation"):
-			var jump_anim = jump_state_node.get_animation()
-			print("  Jump Animation (method): ", jump_anim)
-		elif "animation" in jump_state_node:
-			var jump_anim = jump_state_node.animation
-			print("  Jump Animation (property): ", jump_anim)
-		else:
-			print("  🔍 Investigating available properties...")
-			var property_list = jump_state_node.get_property_list()
-			for prop in property_list:
-				if "anim" in prop.name.to_lower():
-					print("    Found animation-related property: ", prop.name, " = ", jump_state_node.get(prop.name))
-		
-		# Check if animation exists in AnimationPlayer
-		var anim_player = get_node("../YBot/AnimationPlayer") if has_node("../YBot/AnimationPlayer") else null
-		if anim_player:
-			print("  📚 Available animations in AnimationPlayer:")
-			var anim_list = anim_player.get_animation_list()
-			for anim_name in anim_list:
-				print("    - '", anim_name, "'")
-				if "jump" in anim_name.to_lower():
-					print("      ^ This looks like a jump animation! 🦘")
-		else:
-			print("  ❌ AnimationPlayer not found!")
-	else:
-		print("  ❌ JumpState Node: NOT FOUND!")
-	
-	print("\n🎮 PLAYER STATUS:")
-	print("  Position: ", player.global_position)
-	print("  Velocity: ", player.velocity)
-	print("  is_on_floor(): ", player.is_on_floor())
-	print("  is_jumping: ", player.is_jumping)
-	print("  is_firing: ", player.is_firing)
-	print("  is_moving: ", player.is_moving)
-	print("  facing_direction: ", player.facing_direction)
-	
-	print("\n🎯 AIMING STATUS:")
-	print("  Current Aim Direction: ", get_aim_direction_name())
-	print("  Target Blend Position: ", target_blend_position)
-	print("  Current Blend Position: ", current_blend_position)
-	print("  Input Mode: ", get_current_input_mode_name())
-	
-	print("\n📊 BLENDSPACE VALUES:")
-	if animation_tree.active:
-		var locomotion_blend = animation_tree.get(locomotion_blend_space_path)
-		var combat_blend = animation_tree.get(combat_blend_space_path)
-		print("  Locomotion BlendSpace: ", locomotion_blend)
-		print("  Combat BlendSpace: ", combat_blend)
-	else:
-		print("  ❌ AnimationTree not active - no blend values!")
-	
-	print("🔍 ========================================================================\n")
+		if event.is_action_pressed("debug_aim_info"):
+			print("🎯 Aim Debug Info:")
+			print("  Input Mode: ", get_input_mode_name())
+			print("  Aim Direction: ", get_aim_direction_name())
+			print("  Blend Position: ", aim_blend_position)
+			print("  Is Extreme Aim: ", is_aiming_extreme)
+			if current_input_mode == InputMode.MOUSE:
+				print("  Mouse Y: ", mouse_relative_y)
+			else:
+				print("  Controller Input: ", controller_aim_input)

@@ -1,4 +1,4 @@
-#player.gd - AnimationTree Edition!
+#player.gd
 
 extends CharacterBody3D
 class_name Player
@@ -32,7 +32,7 @@ var is_moving: bool = false
 var is_jumping: bool = false
 var is_firing: bool = false
 
-# Components - NOTE: AnimationPlayer is now just for imported animations!
+# Components
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var character_model: Node3D = $YBot
 @onready var collision_shape = $CollisionShape3D
@@ -55,8 +55,9 @@ func setup_player_collision():
 func setup_animation_tree():
 	"""Initialize the AnimationTree system"""
 	if animation_tree:
-		# The AimingController will handle the AnimationTree setup
 		print("🎭 AnimationTree found and ready!")
+		# Ensure the animation tree is active
+		animation_tree.active = true
 	else:
 		print("❌ WARNING: No AnimationTree found! Make sure to add one to the scene.")
 
@@ -79,8 +80,7 @@ func _physics_process(delta):
 	handle_character_facing(delta)
 	handle_firing()
 	
-	# NOTE: Animation updates are now handled by AimingController!
-	# No more manual animation switching needed!
+	# Animation updates are handled by AimingController
 	
 	was_on_floor = is_on_floor()
 	move_and_slide()
@@ -98,16 +98,9 @@ func handle_gravity(delta):
 		velocity.y -= gravity * delta
 		velocity.y = max(velocity.y, -max_fall_speed)
 	
-	# Update jumping state with DETECTIVE WORK! 🕵️‍♂️
+	# Update jumping state
 	var previous_jumping = is_jumping
 	is_jumping = not is_on_floor() and velocity.y > 0
-	
-	# DETECTIVE PRINTS - Let's catch the culprit!
-	if previous_jumping != is_jumping:
-		print("🦘 JUMP STATE CHANGED!")
-		print("  is_on_floor(): ", is_on_floor())
-		print("  velocity.y: ", velocity.y)
-		print("  is_jumping: ", is_jumping)
 
 func handle_jumping(delta):
 	# Update timers
@@ -162,20 +155,21 @@ func handle_firing():
 
 func _on_aim_direction_changed(direction_name: String):
 	"""Respond to aiming direction changes from AimingController"""
-	print("🎯 Player received aim change: ", direction_name)
-	
 	# Here you can add any player-specific responses to aiming changes
 	# For example: sound effects, UI updates, special abilities, etc.
+	pass
 
 func apply_knockback(force: Vector3):
 	if is_alive:
 		velocity += force
 
 func take_hit():
-	"""Play hit reaction - AnimationTree can handle this with OneShot nodes"""
+	"""Play hit reaction"""
 	if is_alive:
-		# TODO: Trigger hit reaction through AnimationTree
-		print("💥 Player hit! (Implement OneShot hit reaction in AnimationTree)")
+		# Trigger hit reaction through AnimationTree if you have one-shot nodes set up
+		if animation_tree and animation_tree.has_parameter("trigger_hit"):
+			animation_tree.set("parameters/trigger_hit", true)
+		print("💥 Player hit!")
 
 func die():
 	if not is_alive:
@@ -184,12 +178,14 @@ func die():
 	print("💀 Player is dying...")
 	is_alive = false
 	
-	# TODO: Death animation through AnimationTree
+	# Trigger death animation through AnimationTree if available
+	if animation_tree and animation_tree.has_parameter("trigger_death"):
+		animation_tree.set("parameters/trigger_death", true)
 	
 	player_died.emit()
 
 func _input(event):
-	if event.is_action_pressed("ui_accept"):
+	if event.is_action_pressed("debug_player_info"):
 		print("🎮 Player Debug Info:")
 		print("  Position: ", global_position)
 		print("  Facing: ", "RIGHT" if facing_direction > 0 else "LEFT")
@@ -199,6 +195,7 @@ func _input(event):
 		print("  Velocity: ", velocity)
 		
 		if aiming_controller:
+			print("  Input Mode: ", aiming_controller.get_input_mode_name())
 			print("  Aim Direction: ", aiming_controller.get_aim_direction_name())
 			print("  Blend Position: ", aiming_controller.get_blend_position())
 
@@ -208,7 +205,7 @@ func get_aim_direction_vector() -> Vector3:
 	if aiming_controller:
 		return aiming_controller.get_aim_direction_vector()
 	else:
-		return Vector3.FORWARD
+		return Vector3.FORWARD * facing_direction
 
 func get_aim_angle_degrees() -> float:
 	"""Get aim angle for weapon systems"""
@@ -216,3 +213,9 @@ func get_aim_angle_degrees() -> float:
 		return aiming_controller.get_aim_angle_degrees()
 	else:
 		return 0.0
+
+func get_weapon_mount_position() -> Vector3:
+	"""Get the position where weapons should be mounted"""
+	# This would typically be a bone attachment point
+	# For now, return a position relative to the player
+	return global_position + Vector3(0.5 * facing_direction, 1.0, 0)

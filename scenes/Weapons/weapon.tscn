@@ -1,0 +1,43 @@
+[gd_scene load_steps=6 format=3 uid="uid://weapon_scene_id"]
+
+[ext_resource type="Script" path="res://scripts/components/weapon_component.gd" id="1_weapon"]
+[ext_resource type="PackedScene" uid="uid://projectile_id" path="res://scenes/projectiles/basic_projectile.tscn" id="2_proj"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_weapon"]
+size = Vector3(1.2, 0.3, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_weapon"]
+albedo_color = Color(0.3, 0.3, 0.3, 1)
+metallic = 0.8
+roughness = 0.2
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_flash"]
+emission_shape = 1
+emission_sphere_radius = 0.1
+initial_velocity_min = 2.0
+initial_velocity_max = 4.0
+scale_min = 0.5
+scale_max = 1.5
+color = Color(1, 0.8, 0.3, 1)
+
+[node name="WeaponComponent" type="Node3D"]
+script = ExtResource("1_weapon")
+projectile_scene = ExtResource("2_proj")
+muzzle_offset = Vector3(0.6, 0, 0)
+
+[node name="MountPoint" type="Node3D" parent="."]
+
+[node name="WeaponPivot" type="Node3D" parent="MountPoint"]
+
+[node name="WeaponModel" type="MeshInstance3D" parent="MountPoint/WeaponPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0, 0)
+mesh = SubResource("BoxMesh_weapon")
+surface_material_override/0 = SubResource("StandardMaterial3D_weapon")
+
+[node name="MuzzleFlash" type="GPUParticles3D" parent="MountPoint/WeaponPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 0, 0)
+emitting = false
+amount = 10
+lifetime = 0.1
+one_shot = true
+process_material = SubResource("ParticleProcessMaterial_flash")

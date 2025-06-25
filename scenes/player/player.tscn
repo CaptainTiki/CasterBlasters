@@ -1,9 +1,8 @@
-[gd_scene load_steps=22 format=3 uid="uid://lrxl1d0jlbb2"]
+[gd_scene load_steps=21 format=3 uid="uid://lrxl1d0jlbb2"]
 
 [ext_resource type="Script" uid="uid://cycsvotnxtau" path="res://scripts/player.gd" id="1_8afob"]
-[ext_resource type="PackedScene" uid="uid://bw2k7m7hsddhi" path="res://art/Players/char_temp/YBot.tscn" id="2_dovo2"]
+[ext_resource type="PackedScene" uid="uid://bw2k7m7hsddhi" path="res://art/Players/char_temp/YBot.tscn" id="2_lvxji"]
 [ext_resource type="Script" uid="uid://co8x2mni43g4d" path="res://scripts/components/aiming_component.gd" id="3_lvxji"]
-[ext_resource type="Script" uid="uid://dpj2f31g335i0" path="res://scenes/player/skeletal_aiming_modifier.gd" id="3_p47bc"]
 [ext_resource type="Script" uid="uid://bqwhedcp70yad" path="res://scripts/components/weapon_component.gd" id="4_p47bc"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_dovo2"]
@@ -74,87 +73,62 @@ script = ExtResource("1_8afob")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("CapsuleShape3D_dovo2")
 
-[node name="YBot" parent="." instance=ExtResource("2_dovo2")]
+[node name="YBot" parent="." instance=ExtResource("2_lvxji")]
 
 [node name="Skeleton3D" parent="YBot" index="0"]
-bones/0/position = Vector3(0.00486261, 0.907405, -0.00368203)
-bones/0/rotation = Quaternion(-0.0188735, -0.235879, -0.0111254, 0.971536)
-bones/1/rotation = Quaternion(0.0134353, -0.0197934, 0.0114679, 0.999648)
-bones/2/rotation = Quaternion(0.0874921, -0.00509387, -0.00330466, 0.996147)
-bones/3/rotation = Quaternion(0.143929, -0.00558883, -0.00295559, 0.989568)
-bones/4/rotation = Quaternion(0.0258341, 0.0478274, 0.0115687, 0.998454)
-bones/5/rotation = Quaternion(-0.0260923, 0.16582, 0.0977003, 0.980957)
-bones/7/rotation = Quaternion(-0.371672, -0.446006, 0.566848, -0.584485)
-bones/8/rotation = Quaternion(0.395234, -0.390539, 0.377432, 0.74082)
-bones/9/rotation = Quaternion(-7.63397e-08, -2.71437e-08, 0.430188, 0.90274)
-bones/10/rotation = Quaternion(-0.0867154, -0.86569, -0.165639, 0.464354)
-bones/11/rotation = Quaternion(0.227609, -0.0338195, 0.135382, 0.963702)
-bones/12/rotation = Quaternion(0.0135013, 0.168835, -0.0633634, 0.983513)
-bones/13/rotation = Quaternion(-0.0116103, 0.0128743, 0.0917385, 0.995632)
-bones/15/rotation = Quaternion(0.31629, -0.0127424, -0.0317919, 0.948044)
-bones/16/rotation = Quaternion(0.499445, -3.47849e-07, -0.0511816, 0.864832)
-bones/17/rotation = Quaternion(0.209232, -1.81957e-07, -0.0214414, 0.977631)
-bones/19/rotation = Quaternion(0.440802, -0.0179263, -0.0447339, 0.89631)
-bones/20/rotation = Quaternion(0.536096, -4.31202e-07, -0.0549374, 0.842368)
-bones/21/rotation = Quaternion(0.154992, -3.82424e-08, -0.0158831, 0.987788)
-bones/23/rotation = Quaternion(0.506598, -0.0256271, -0.0429464, 0.860731)
-bones/24/rotation = Quaternion(0.585406, -4.31202e-07, -0.0599907, 0.808518)
-bones/25/rotation = Quaternion(0.22264, -1.62749e-07, -0.0228154, 0.974634)
-bones/27/rotation = Quaternion(0.590679, -0.0693326, 0.00187173, 0.80392)
-bones/28/rotation = Quaternion(0.52915, -2.45869e-07, -0.0542255, 0.846794)
-bones/29/rotation = Quaternion(0.122369, -1.17434e-07, -0.0125399, 0.992406)
-bones/31/rotation = Quaternion(0.336846, -0.464618, 0.641684, 0.508829)
-bones/32/rotation = Quaternion(0.520177, -0.0527341, -0.557872, 0.644526)
-bones/33/rotation = Quaternion(-5.6291e-08, 6.88105e-08, -0.778126, 0.628109)
-bones/34/rotation = Quaternion(-0.129994, 0.274495, 0.303015, 0.903292)
-bones/35/rotation = Quaternion(0.350051, 0.0287239, -0.150436, 0.924126)
-bones/36/rotation = Quaternion(-0.111979, -0.187439, 0.209721, 0.953071)
-bones/37/rotation = Quaternion(-0.272423, -0.0181684, 0.407761, 0.871313)
-bones/39/rotation = Quaternion(0.110323, 0.00669319, -0.0163287, 0.993739)
-bones/40/rotation = Quaternion(0.282951, 3.14205e-07, 0.0230496, 0.958858)
-bones/41/rotation = Quaternion(0.2567, 1.39116e-07, 0.0209115, 0.966265)
-bones/43/rotation = Quaternion(0.432333, 0.000534129, 0.0693913, 0.89904)
-bones/44/rotation = Quaternion(0.819341, 5.06639e-07, 0.0667455, 0.569409)
-bones/45/rotation = Quaternion(0.163276, 1.48255e-07, 0.0133008, 0.986491)
-bones/47/rotation = Quaternion(0.477062, 0.0355887, 0.00688716, 0.878122)
-bones/48/rotation = Quaternion(0.761504, 5.79283e-07, 0.062034, 0.645185)
-bones/49/rotation = Quaternion(0.425283, 2.84053e-07, 0.0346446, 0.904397)
-bones/51/rotation = Quaternion(0.533501, 0.0442792, 0.00605271, 0.844618)
-bones/52/rotation = Quaternion(0.657975, 4.61005e-07, 0.0536002, 0.75113)
-bones/53/rotation = Quaternion(0.49728, 3.25963e-07, 0.0405096, 0.866644)
-bones/55/rotation = Quaternion(0.244563, 0.113204, 0.95804, -0.0976384)
-bones/56/rotation = Quaternion(-0.472147, -0.0175334, -0.00130262, 0.881345)
-bones/57/rotation = Quaternion(0.529124, -0.0335599, -0.00763338, 0.847847)
-bones/58/rotation = Quaternion(0.242522, -0.0324765, -0.0150942, 0.969485)
-bones/60/rotation = Quaternion(0.0515045, 0.179442, 0.981876, -0.0326647)
-bones/61/rotation = Quaternion(-0.414791, 0.00477405, -0.0157254, 0.909768)
-bones/62/rotation = Quaternion(0.685344, 0.13477, -0.0676163, 0.712439)
-bones/63/rotation = Quaternion(0.24172, 0.0320791, 0.0149957, 0.9697)
-
-[node name="SkeletalAimingModifier" type="SkeletonModifier3D" parent="YBot/Skeleton3D" index="2"]
-_import_path = NodePath("")
-unique_name_in_owner = false
-process_mode = 0
-process_priority = 0
-process_physics_priority = 0
-process_thread_group = 0
-physics_interpolation_mode = 0
-auto_translate_mode = 0
-editor_description = ""
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 0, 0, 0)
-rotation_edit_mode = 0
-rotation_order = 2
-top_level = false
-visible = true
-visibility_parent = NodePath("")
-active = true
-influence = 1.0
-script = ExtResource("3_p47bc")
-aim_strength = 50.0
-spine_influence = 25.0
-arm_influence = 10.0
-show_bone_gizmos = true
-metadata/_custom_type_script = "uid://dpj2f31g335i0"
+bones/0/position = Vector3(0.00442952, 0.959015, -0.00612048)
+bones/0/rotation = Quaternion(-0.111016, -0.340218, -0.0276318, 0.933361)
+bones/1/rotation = Quaternion(0.00897229, -0.000378842, -0.00106014, 0.999959)
+bones/2/rotation = Quaternion(0.142943, 0.000632342, -0.00658159, 0.989709)
+bones/3/rotation = Quaternion(0.199635, -0.000366637, -0.00650208, 0.979849)
+bones/4/rotation = Quaternion(0.00650309, 0.0651901, 0.00768679, 0.997822)
+bones/5/rotation = Quaternion(-0.0401186, 0.192201, 0.0901438, 0.976383)
+bones/7/rotation = Quaternion(-0.292878, -0.33377, 0.669125, -0.595896)
+bones/8/rotation = Quaternion(0.476306, -0.225799, 0.315284, 0.789141)
+bones/9/rotation = Quaternion(-2.63695e-08, -8.26405e-08, 0.536168, 0.844111)
+bones/10/rotation = Quaternion(-0.0971766, -0.787101, -0.278144, 0.541909)
+bones/11/rotation = Quaternion(0.226758, -0.0325067, 0.134595, 0.964058)
+bones/12/rotation = Quaternion(0.0136104, 0.169119, -0.0632281, 0.983471)
+bones/13/rotation = Quaternion(-0.011658, 0.0131052, 0.0923197, 0.995575)
+bones/15/rotation = Quaternion(0.315085, -0.0125801, -0.0319868, 0.948441)
+bones/16/rotation = Quaternion(0.499451, -4.30555e-07, -0.0511821, 0.864829)
+bones/17/rotation = Quaternion(0.209056, -2.72446e-08, -0.0214235, 0.977669)
+bones/19/rotation = Quaternion(0.441257, -0.018056, -0.0446574, 0.896087)
+bones/20/rotation = Quaternion(0.535757, -4.69597e-07, -0.0549028, 0.842585)
+bones/21/rotation = Quaternion(0.154932, 2.44026e-08, -0.015877, 0.987798)
+bones/23/rotation = Quaternion(0.507391, -0.02598, -0.0427747, 0.860261)
+bones/24/rotation = Quaternion(0.586003, -4.71157e-07, -0.0600517, 0.808081)
+bones/25/rotation = Quaternion(0.22264, -5.15008e-08, -0.0228155, 0.974634)
+bones/27/rotation = Quaternion(0.591182, -0.0695546, 0.0018629, 0.803531)
+bones/28/rotation = Quaternion(0.528816, -5.82616e-07, -0.0541914, 0.847005)
+bones/29/rotation = Quaternion(0.122178, -1.05455e-07, -0.0125204, 0.992429)
+bones/31/rotation = Quaternion(0.186908, -0.387823, 0.72194, 0.54172)
+bones/32/rotation = Quaternion(0.472778, -0.178112, -0.615015, 0.605403)
+bones/33/rotation = Quaternion(-3.6726e-08, 1.77294e-08, -0.75724, 0.653137)
+bones/34/rotation = Quaternion(-0.1601, 0.388912, 0.240336, 0.874845)
+bones/35/rotation = Quaternion(0.349211, 0.0275747, -0.150888, 0.924405)
+bones/36/rotation = Quaternion(-0.111954, -0.187873, 0.210886, 0.952731)
+bones/37/rotation = Quaternion(-0.27215, -0.0182443, 0.407835, 0.871362)
+bones/39/rotation = Quaternion(0.108171, 0.00638963, -0.0154741, 0.993991)
+bones/40/rotation = Quaternion(0.28295, 2.88214e-07, 0.0230497, 0.958858)
+bones/41/rotation = Quaternion(0.2567, 1.51253e-07, 0.0209115, 0.966265)
+bones/43/rotation = Quaternion(0.432897, 0.000535837, 0.0693342, 0.898773)
+bones/44/rotation = Quaternion(0.819292, 8.00176e-07, 0.0667416, 0.569479)
+bones/45/rotation = Quaternion(0.1632, 1.44064e-08, 0.0132946, 0.986504)
+bones/47/rotation = Quaternion(0.477496, 0.0364976, 0.00598949, 0.877855)
+bones/48/rotation = Quaternion(0.761649, 6.44876e-07, 0.0620457, 0.645013)
+bones/49/rotation = Quaternion(0.424966, 5.70255e-07, 0.0346188, 0.904547)
+bones/51/rotation = Quaternion(0.53461, 0.044856, 0.00573073, 0.843888)
+bones/52/rotation = Quaternion(0.658049, 5.57025e-07, 0.0536062, 0.751064)
+bones/53/rotation = Quaternion(0.497366, 3.66949e-07, 0.0405166, 0.866594)
+bones/55/rotation = Quaternion(0.395802, 0.0680384, 0.903362, -0.150497)
+bones/56/rotation = Quaternion(-0.212285, -0.00641179, -0.0103161, 0.977132)
+bones/57/rotation = Quaternion(0.522291, -0.00603944, 0.0113492, 0.85267)
+bones/58/rotation = Quaternion(0.229418, -0.0325805, -0.0153502, 0.972662)
+bones/60/rotation = Quaternion(0.0463355, -0.0379793, 0.996919, 0.0506367)
+bones/61/rotation = Quaternion(-0.286738, 0.0046333, 0.0142369, 0.957892)
+bones/62/rotation = Quaternion(0.676383, 0.144732, -0.0422645, 0.720953)
+bones/63/rotation = Quaternion(0.227883, 0.0321195, 0.0152542, 0.973039)
 
 [node name="Components" type="Node3D" parent="."]
 
@@ -167,9 +141,7 @@ animation_tree = NodePath("../../AnimationTree")
 script = ExtResource("4_p47bc")
 
 [node name="AnimationTree" type="AnimationTree" parent="."]
-root_node = NodePath("../YBot")
 tree_root = SubResource("AnimationNodeStateMachine_uf5tr")
-anim_player = NodePath("../YBot/AnimationPlayer")
 parameters/LocomotionState/blend_position = Vector2(0.485714, 0.0148699)
 
 [editable path="YBot"]
